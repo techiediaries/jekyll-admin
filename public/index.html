@@ -372,7 +372,7 @@ function renderLayouts(layouts, filter = '') {
           ${data.count > 50 ? `<div class="px-4 py-2 text-xs text-[#8b949e]">… and ${data.count - 50} more</div>` : ''}
         </div>` : ''}
       </details>
-    `).join('') || '<div class="px-4 py-8 text-center text-[#8b949e] text-sm">No layouts found</div>'
+    `).join('') || '<div class="px-4 py-8 text-center text-[#8b949e] text-sm">No layouts found</div>'}
   `;
 }
 
@@ -402,7 +402,7 @@ function renderPlugins(plugins) {
         <div class="col-span-2 text-xs text-[#8b949e]">${p.produces.map(f => `<div class="truncate text-[#ffa657]">${f}</div>`).join('') || '—'}</div>
         <div class="col-span-1">${p.skippable ? '<span class="text-[#3fb950] text-xs">yes</span>' : '<span class="text-[#8b949e] text-xs">no</span>'}</div>
       </div>
-    `).join('') || '<div class="px-4 py-8 text-center text-[#8b949e] text-sm">No plugins found</div>'
+    `).join('') || '<div class="px-4 py-8 text-center text-[#8b949e] text-sm">No plugins found</div>'}
   `;
 }
 
@@ -429,7 +429,7 @@ function renderIncludes() {
         <div class="col-span-1 text-right text-xs text-[#8b949e]">${data.lines}</div>
         <div class="col-span-1 text-right">${data.orphan ? '<span class="pill bg-amber-900/30 text-amber-400">orphan</span>' : ''}</div>
       </div>
-    `).join('') || '<div class="px-4 py-8 text-center text-[#8b949e] text-sm">No includes found</div>'
+    `).join('') || '<div class="px-4 py-8 text-center text-[#8b949e] text-sm">No includes found</div>'}
   `;
 }
 
@@ -450,7 +450,7 @@ function renderDataFiles(dataFiles) {
         <div class="col-span-1 text-right text-xs text-[#8b949e]">${fmtSize(f.size)}</div>
         <div class="col-span-1 text-right"><button onclick="openDataFile('${escHtml(f.path)}')" class="text-xs text-[#58a6ff] hover:underline">Edit</button></div>
       </div>
-    `).join('') || '<div class="px-4 py-8 text-center text-[#8b949e] text-sm">No data files</div>'
+    `).join('') || '<div class="px-4 py-8 text-center text-[#8b949e] text-sm">No data files</div>'}
   `;
 }
 
