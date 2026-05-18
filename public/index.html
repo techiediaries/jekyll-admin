@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jekyll Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { --sidebar-w: 220px; }
+    body { display: flex; height: 100vh; overflow: hidden; background: #0f1117; color: #e2e8f0; font-family: ui-monospace, 'Cascadia Code', monospace; }
+    #sidebar { width: var(--sidebar-w); min-width: var(--sidebar-w); background: #161b22; border-right: 1px solid #21262d; display: flex; flex-direction: column; }
+    #main { flex: 1; overflow-y: auto; }
+    .tab-btn { display: flex; align-items: center; gap: 10px; padding: 10px 16px; cursor: pointer; border-radius: 6px; margin: 2px 8px; font-size: 13px; color: #8b949e; transition: all .15s; }
+    .tab-btn:hover { background: #21262d; color: #c9d1d9; }
+    .tab-btn.active { background: #21262d; color: #58a6ff; }
+    .tab-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .panel { display: none; padding: 32px; }
+    .panel.active { display: block; }
+    .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; }
+    .card { background: #161b22; border: 1px solid #21262d; border-radius: 8px; }
+    .table-row { border-bottom: 1px solid #21262d; }
+    .table-row:last-child { border-bottom: none; }
+    .expand-row { background: #0d1117; border-top: 1px solid #21262d; }
+    .post-link { display: flex; gap: 12px; padding: 6px 16px; font-size: 12px; color: #8b949e; align-items: center; }
+    .post-link:hover { background: #161b22; color: #58a6ff; }
+    .stat-card { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 20px; }
+    .pill { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+    details > summary { list-style: none; cursor: pointer; }
+    details > summary::-webkit-details-marker { display: none; }
+    .shell-output { font-size: 12px; line-height: 1.6; background: #0d1117; border-radius: 6px; padding: 16px; max-height: 400px; overflow-y: auto; white-space: pre-wrap; }
+    .line-stdout { color: #c9d1d9; }
+    .line-stderr { color: #f97316; }
+    .line-error { color: #f85149; }
+    .line-exit-ok { color: #3fb950; }
+    .line-exit-err { color: #f85149; }
+    input[type=text], input[type=search] { background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; border-radius: 6px; padding: 6px 10px; font-size: 13px; outline: none; }
+    input[type=text]:focus, input[type=search]:focus { border-color: #58a6ff; }
+    .btn { padding: 6px 14px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid; transition: all .15s; }
+    .btn-primary { background: #238636; border-color: #2ea043; color: #fff; }
+    .btn-primary:hover { background: #2ea043; }
+    .btn-ghost { background: transparent; border-color: #30363d; color: #8b949e; }
+    .btn-ghost:hover { border-color: #58a6ff; color: #58a6ff; }
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="p-4 border-b border-[#21262d]">
+    <div class="text-sm font-bold text-white">jekyll-admin</div>
+    <div id="site-root-label" class="text-xs text-[#8b949e] mt-1 truncate">loading…</div>
+  </div>
+
+  <div class="flex-1 py-3">
+    <div class="px-3 mb-1 text-[10px] font-semibold uppercase tracking-wider text-[#8b949e]">Site</div>
+    <button class="tab-btn active" data-tab="inspector">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0121 9.414V19a2 2 0 01-2 2z"/></svg>
+      Inspector
+    </button>
+    <button class="tab-btn" data-tab="posts">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l5 5v11a2 2 0 01-2 2z"/></svg>
+      Posts
+    </button>
+    <button class="tab-btn" data-tab="data">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2 1 3 3 3h10c2 0 3-1 3-3V7M4 7c0-2 1-3 3-3h10c2 0 3 1 3 3M4 7h16"/></svg>
+      Data Files
+    </button>
+    <button class="tab-btn" data-tab="media">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      Media
+    </button>
+
+    <div class="px-3 mt-4 mb-1 text-[10px] font-semibold uppercase tracking-wider text-[#8b949e]">Tools</div>
+    <button class="tab-btn" data-tab="build">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+      Build
+    </button>
+    <button class="tab-btn" data-tab="debug">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/></svg>
+      Debug
+    </button>
+  </div>
+
+  <div class="p-3 border-t border-[#21262d]">
+    <div id="scan-status" class="text-xs text-[#8b949e]">Scanning…</div>
+    <button onclick="refreshManifest()" class="mt-2 w-full btn btn-ghost text-xs">↺ Re-scan</button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- INSPECTOR TAB -->
+  <div id="tab-inspector" class="panel active">
+    <div class="flex items-center justify-between mb-8">
+      <h1 class="text-xl font-bold text-white">Site Inspector</h1>
+      <span id="scan-time" class="text-xs text-[#8b949e]"></span>
+    </div>
+
+    <!-- Stat row -->
+    <div id="stat-row" class="grid grid-cols-5 gap-4 mb-8"></div>
+
+    <!-- Layouts -->
+    <section class="mb-8">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-semibold text-white uppercase tracking-wider">Layouts</h2>
+        <input type="search" id="layout-filter" placeholder="Filter…" class="w-40 text-xs" oninput="filterLayouts(this.value)">
+      </div>
+      <div id="layouts-table" class="card overflow-hidden"></div>
+    </section>
+
+    <!-- Plugins -->
+    <section class="mb-8">
+      <h2 class="text-sm font-semibold text-white uppercase tracking-wider mb-3">Custom Plugins</h2>
+      <div id="plugins-table" class="card overflow-hidden"></div>
+    </section>
+
+    <!-- Includes -->
+    <section class="mb-8">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-semibold text-white uppercase tracking-wider">Includes</h2>
+        <label class="flex items-center gap-2 text-xs text-[#8b949e] cursor-pointer">
+          <input type="checkbox" id="orphans-only" onchange="renderIncludes()" class="rounded">
+          Orphans only
+        </label>
+      </div>
+      <div id="includes-table" class="card overflow-hidden"></div>
+    </section>
+
+    <!-- Data files -->
+    <section class="mb-8">
+      <h2 class="text-sm font-semibold text-white uppercase tracking-wider mb-3">Data Files</h2>
+      <div id="datafiles-table" class="card overflow-hidden"></div>
+    </section>
+  </div>
+
+  <!-- POSTS TAB -->
+  <div id="tab-posts" class="panel">
+    <div class="flex items-center gap-4 mb-6">
+      <h1 class="text-xl font-bold text-white">Posts</h1>
+      <input type="search" id="post-search" placeholder="Search title…" class="flex-1 max-w-sm" oninput="filterPosts()">
+      <select id="layout-select" onchange="filterPosts()" class="bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] rounded-md px-3 py-1.5 text-sm">
+        <option value="">All layouts</option>
+      </select>
+    </div>
+    <div id="posts-table" class="card overflow-hidden"></div>
+  </div>
+
+  <!-- DATA FILES TAB -->
+  <div id="tab-data" class="panel">
+    <h1 class="text-xl font-bold text-white mb-6">Data Files</h1>
+    <div class="grid grid-cols-3 gap-6">
+      <div class="card p-0 overflow-hidden">
+        <div class="px-4 py-3 border-b border-[#21262d] text-xs font-semibold text-[#8b949e] uppercase">Files</div>
+        <div id="data-file-list" class="overflow-y-auto max-h-[70vh]"></div>
+      </div>
+      <div class="col-span-2">
+        <div id="data-editor-panel" class="text-[#8b949e] text-sm mt-8 text-center">Select a file to view</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MEDIA TAB -->
+  <div id="tab-media" class="panel">
+    <h1 class="text-xl font-bold text-white mb-6">Media</h1>
+    <div class="grid grid-cols-3 gap-6">
+      <div class="card p-0 overflow-hidden">
+        <div class="px-4 py-3 border-b border-[#21262d] flex items-center justify-between">
+          <span class="text-xs font-semibold text-[#8b949e] uppercase">assets/</span>
+          <label class="btn btn-primary text-xs cursor-pointer">Upload <input type="file" id="upload-input" class="hidden" multiple onchange="uploadFiles(this)"></label>
+        </div>
+        <div id="media-browser" class="overflow-y-auto max-h-[70vh]"></div>
+      </div>
+      <div class="col-span-2">
+        <div id="media-preview" class="text-[#8b949e] text-sm mt-8 text-center">Select a file to preview</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUILD TAB -->
+  <div id="tab-build" class="panel">
+    <h1 class="text-xl font-bold text-white mb-6">Build</h1>
+    <div class="flex gap-3 mb-6">
+      <button onclick="runPreset('build')" class="btn btn-primary">jekyll build</button>
+      <button onclick="runPreset('serve')" class="btn btn-ghost">jekyll serve</button>
+      <button onclick="runPreset('build:css')" class="btn btn-ghost">build:css</button>
+    </div>
+    <div id="shell-output" class="shell-output hidden"></div>
+  </div>
+
+  <!-- DEBUG TAB -->
+  <div id="tab-debug" class="panel">
+    <h1 class="text-xl font-bold text-white mb-6">Debug</h1>
+
+    <!-- Feature flags -->
+    <section class="mb-8">
+      <h2 class="text-sm font-semibold text-white uppercase tracking-wider mb-3">Feature Flags</h2>
+      <div id="flags-panel" class="card p-4">
+        <div class="text-xs text-[#8b949e]">Loading features.json…</div>
+      </div>
+    </section>
+
+    <!-- Gate simulator -->
+    <section class="mb-8">
+      <h2 class="text-sm font-semibold text-white uppercase tracking-wider mb-3">Gate Simulator</h2>
+      <div class="card p-4">
+        <p class="text-xs text-[#8b949e] mb-3">Set subscriber state cookie — mirrors the <code class="text-[#58a6ff]">?_sub=</code> URL param.</p>
+        <div class="flex gap-2 flex-wrap">
+          <button onclick="simulate('email')" class="btn btn-ghost">Email subscriber</button>
+          <button onclick="simulate('push')" class="btn btn-ghost">Push subscriber</button>
+          <button onclick="simulate('pwa')" class="btn btn-ghost">PWA installed</button>
+          <button onclick="simulate('none')" class="btn btn-ghost text-red-400">Clear</button>
+        </div>
+        <div id="sim-status" class="mt-3 text-xs text-[#3fb950] hidden"></div>
+      </div>
+    </section>
+
+    <!-- URL builder -->
+    <section class="mb-8">
+      <h2 class="text-sm font-semibold text-white uppercase tracking-wider mb-3">URL Builder</h2>
+      <div class="card p-4">
+        <div class="flex flex-col gap-3">
+          <div class="flex gap-3 items-center">
+            <label class="text-xs text-[#8b949e] w-20">Base URL</label>
+            <input type="text" id="url-base" value="http://localhost:4000" class="flex-1">
+          </div>
+          <div class="flex gap-3 items-center">
+            <label class="text-xs text-[#8b949e] w-20">_sub</label>
+            <select id="url-sub" class="bg-[#0d1117] border border-[#30363d] text-[#c9d1d9] rounded-md px-2 py-1 text-sm">
+              <option value="">none</option>
+              <option value="email">email</option>
+              <option value="push">push</option>
+              <option value="pwa">pwa</option>
+            </select>
+          </div>
+          <div class="flex gap-3 items-center">
+            <label class="text-xs text-[#8b949e] w-20">_teaser</label>
+            <input type="text" id="url-teaser" placeholder="1" class="w-24">
+          </div>
+          <div class="flex gap-3 items-center">
+            <label class="text-xs text-[#8b949e] w-20">debug</label>
+            <input type="text" id="url-debug" placeholder="secret or blank" class="w-40">
+          </div>
+          <div class="flex gap-3 items-start mt-1">
+            <label class="text-xs text-[#8b949e] w-20 pt-2">Result</label>
+            <div class="flex-1">
+              <code id="url-result" class="text-xs text-[#58a6ff] break-all block mb-2"></code>
+              <div class="flex gap-2">
+                <button onclick="copyUrl()" class="btn btn-ghost text-xs">Copy</button>
+                <button onclick="openUrl()" class="btn btn-primary text-xs">Open</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- State -->
+    <section>
+      <h2 class="text-sm font-semibold text-white uppercase tracking-wider mb-3">Server State</h2>
+      <div id="debug-state" class="card p-4 font-mono text-xs text-[#8b949e]">Loading…</div>
+    </section>
+  </div>
+
+</div>
+
+<script>
+let manifest = null;
+let allPosts = [];
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'debug') loadDebugTab();
+    if (btn.dataset.tab === 'data') loadDataTab();
+    if (btn.dataset.tab === 'media') loadMedia('assets');
+  });
+});
+
+// ── Manifest ──────────────────────────────────────────────────────────────────
+
+async function refreshManifest() {
+  document.getElementById('scan-status').textContent = 'Scanning…';
+  const res = await fetch('/api/manifest');
+  manifest = await res.json();
+  renderAll();
+}
+
+async function renderAll() {
+  const { siteRoot, scannedAt, totals, layouts, plugins, includes, dataFiles } = manifest;
+
+  document.getElementById('site-root-label').textContent = siteRoot.split('/').pop();
+  document.getElementById('scan-status').textContent = `${totals.posts} posts`;
+  document.getElementById('scan-time').textContent = 'Scanned ' + new Date(scannedAt).toLocaleTimeString();
+
+  renderStats(totals);
+  renderLayouts(layouts);
+  renderPlugins(plugins);
+  renderIncludes();
+  renderDataFiles(dataFiles);
+  renderPostsTab(layouts);
+
+  // Config
+  const cfg = await (await fetch('/api/config')).json();
+  document.getElementById('site-root-label').textContent = cfg.siteRoot.split('/').pop() + '/';
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+
+function renderStats(totals) {
+  const items = [
+    { label: 'Posts', value: totals.posts, color: 'text-[#58a6ff]' },
+    { label: 'Layouts', value: totals.layouts, color: 'text-[#3fb950]' },
+    { label: 'Plugins', value: totals.plugins, color: 'text-[#d2a8ff]' },
+    { label: 'Includes', value: totals.includes, color: 'text-[#ffa657]' },
+    { label: 'Data Files', value: totals.dataFiles, color: 'text-[#ff7b72]' },
+  ];
+  document.getElementById('stat-row').innerHTML = items.map(i =>
+    `<div class="stat-card text-center">
+      <div class="text-3xl font-black ${i.color}">${i.value}</div>
+      <div class="text-xs text-[#8b949e] mt-1">${i.label}</div>
+    </div>`
+  ).join('');
+}
+
+// ── Layouts ───────────────────────────────────────────────────────────────────
+
+function renderLayouts(layouts, filter = '') {
+  const sorted = Object.entries(layouts)
+    .filter(([name]) => !filter || name.includes(filter))
+    .sort((a, b) => b[1].count - a[1].count);
+
+  document.getElementById('layouts-table').innerHTML = `
+    <div class="grid grid-cols-12 text-xs font-semibold text-[#8b949e] uppercase px-4 py-2 border-b border-[#21262d]">
+      <div class="col-span-4">Layout</div>
+      <div class="col-span-2">Posts</div>
+      <div class="col-span-4">File</div>
+      <div class="col-span-2">Status</div>
+    </div>
+    ${sorted.map(([name, data]) => `
+      <details class="table-row group">
+        <summary class="grid grid-cols-12 items-center px-4 py-3 text-sm hover:bg-[#21262d] cursor-pointer select-none">
+          <div class="col-span-4 flex items-center gap-2">
+            <svg class="w-3 h-3 text-[#8b949e] group-open:rotate-90 transition-transform" fill="currentColor" viewBox="0 0 20 20"><path d="M6 6l8 4-8 4V6z"/></svg>
+            <span class="font-mono text-[#c9d1d9]">${name}</span>
+          </div>
+          <div class="col-span-2">
+            <span class="badge ${data.count > 0 ? 'bg-[#1f3a1f] text-[#3fb950]' : 'bg-[#21262d] text-[#8b949e]'}">${data.count}</span>
+          </div>
+          <div class="col-span-4 text-xs text-[#8b949e] truncate">${data.file || '—'}</div>
+          <div class="col-span-2">
+            ${data.missing ? '<span class="pill bg-red-900/30 text-red-400">⚠ missing</span>' : ''}
+            ${data.count === 0 && !data.missing ? '<span class="pill bg-[#21262d] text-[#8b949e]">unused</span>' : ''}
+          </div>
+        </summary>
+        ${data.count > 0 ? `
+        <div class="expand-row pb-2">
+          <div class="px-4 py-2 text-xs text-[#8b949e] border-b border-[#21262d]">Posts using <strong class="text-white">${name}</strong></div>
+          ${data.posts.slice(0, 50).map(p => `
+            <div class="post-link">
+              <span class="text-[#8b949e] w-24 shrink-0">${p.date || '—'}</span>
+              <span class="text-[#c9d1d9] truncate flex-1">${escHtml(p.title)}</span>
+              <a href="http://localhost:4000${p.url}" target="_blank" class="text-[#58a6ff] shrink-0 hover:underline text-xs ml-2">↗</a>
+              <span class="text-[#8b949e] text-xs ml-2 shrink-0 truncate max-w-[200px]">${p.path}</span>
+            </div>
+          `).join('')}
+          ${data.count > 50 ? `<div class="px-4 py-2 text-xs text-[#8b949e]">… and ${data.count - 50} more</div>` : ''}
+        </div>` : ''}
+      </details>
+    `).join('') || '<div class="px-4 py-8 text-center text-[#8b949e] text-sm">No layouts found</div>'
+  `;
+}
+
+function filterLayouts(val) {
+  if (!manifest) return;
+  renderLayouts(manifest.layouts, val.trim().toLowerCase());
+}
+
+// ── Plugins ───────────────────────────────────────────────────────────────────
+
+function renderPlugins(plugins) {
+  document.getElementById('plugins-table').innerHTML = `
+    <div class="grid grid-cols-12 text-xs font-semibold text-[#8b949e] uppercase px-4 py-2 border-b border-[#21262d]">
+      <div class="col-span-3">File</div>
+      <div class="col-span-2">Type</div>
+      <div class="col-span-4">Description</div>
+      <div class="col-span-2">Produces</div>
+      <div class="col-span-1">Skip?</div>
+    </div>
+    ${plugins.map(p => `
+      <div class="table-row grid grid-cols-12 items-start px-4 py-3 text-sm hover:bg-[#21262d]">
+        <div class="col-span-3 font-mono text-[#d2a8ff] text-xs truncate">${p.name}</div>
+        <div class="col-span-2">
+          <span class="pill bg-[#1a1f30] text-[#58a6ff]">${p.type}</span>
+        </div>
+        <div class="col-span-4 text-xs text-[#8b949e] leading-relaxed">${escHtml(p.description || '—')}</div>
+        <div class="col-span-2 text-xs text-[#8b949e]">${p.produces.map(f => `<div class="truncate text-[#ffa657]">${f}</div>`).join('') || '—'}</div>
+        <div class="col-span-1">${p.skippable ? '<span class="text-[#3fb950] text-xs">yes</span>' : '<span class="text-[#8b949e] text-xs">no</span>'}</div>
+      </div>
+    `).join('') || '<div class="px-4 py-8 text-center text-[#8b949e] text-sm">No plugins found</div>'
+  `;
+}
+
+// ── Includes ──────────────────────────────────────────────────────────────────
+
+function renderIncludes() {
+  if (!manifest) return;
+  const orphansOnly = document.getElementById('orphans-only').checked;
+  const entries = Object.entries(manifest.includes)
+    .filter(([, v]) => !orphansOnly || v.orphan)
+    .sort((a, b) => b[1].usedBy.length - a[1].usedBy.length);
+
+  document.getElementById('includes-table').innerHTML = `
+    <div class="grid grid-cols-12 text-xs font-semibold text-[#8b949e] uppercase px-4 py-2 border-b border-[#21262d]">
+      <div class="col-span-5">File</div>
+      <div class="col-span-5">Used by</div>
+      <div class="col-span-1 text-right">Lines</div>
+      <div class="col-span-1 text-right">Status</div>
+    </div>
+    ${entries.map(([name, data]) => `
+      <div class="table-row grid grid-cols-12 items-start px-4 py-3 text-sm hover:bg-[#21262d]">
+        <div class="col-span-5 font-mono text-[#ffa657] text-xs truncate">${name}</div>
+        <div class="col-span-5 text-xs text-[#8b949e]">${data.usedBy.slice(0,4).map(l => `<span class="inline-block bg-[#21262d] rounded px-1.5 py-0.5 mr-1 mb-1 truncate max-w-[120px]">${l.replace('_layouts/', '')}</span>`).join('')}${data.usedBy.length > 4 ? `<span class="text-[#8b949e]">+${data.usedBy.length - 4}</span>` : ''}</div>
+        <div class="col-span-1 text-right text-xs text-[#8b949e]">${data.lines}</div>
+        <div class="col-span-1 text-right">${data.orphan ? '<span class="pill bg-amber-900/30 text-amber-400">orphan</span>' : ''}</div>
+      </div>
+    `).join('') || '<div class="px-4 py-8 text-center text-[#8b949e] text-sm">No includes found</div>'
+  `;
+}
+
+// ── Data files (inspector summary) ───────────────────────────────────────────
+
+function renderDataFiles(dataFiles) {
+  document.getElementById('datafiles-table').innerHTML = `
+    <div class="grid grid-cols-12 text-xs font-semibold text-[#8b949e] uppercase px-4 py-2 border-b border-[#21262d]">
+      <div class="col-span-5">File</div>
+      <div class="col-span-5">Keys</div>
+      <div class="col-span-1 text-right">Size</div>
+      <div class="col-span-1 text-right">Action</div>
+    </div>
+    ${dataFiles.map(f => `
+      <div class="table-row grid grid-cols-12 items-center px-4 py-3 text-sm hover:bg-[#21262d]">
+        <div class="col-span-5 font-mono text-xs text-[#58a6ff] truncate">${f.path}</div>
+        <div class="col-span-5 text-xs text-[#8b949e] truncate">${f.keys.join(', ')}</div>
+        <div class="col-span-1 text-right text-xs text-[#8b949e]">${fmtSize(f.size)}</div>
+        <div class="col-span-1 text-right"><button onclick="openDataFile('${escHtml(f.path)}')" class="text-xs text-[#58a6ff] hover:underline">Edit</button></div>
+      </div>
+    `).join('') || '<div class="px-4 py-8 text-center text-[#8b949e] text-sm">No data files</div>'
+  `;
+}
+
+// ── Posts tab ─────────────────────────────────────────────────────────────────
+
+function renderPostsTab(layouts) {
+  allPosts = Object.entries(layouts).flatMap(([layout, data]) =>
+    data.posts.map(p => ({ ...p, layout }))
+  ).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+
+  const sel = document.getElementById('layout-select');
+  const currentLayouts = [...new Set(allPosts.map(p => p.layout))].sort();
+  sel.innerHTML = '<option value="">All layouts</option>' +
+    currentLayouts.map(l => `<option value="${l}">${l}</option>`).join('');
+
+  renderPostsTable(allPosts);
+}
+
+function filterPosts() {
+  const q = document.getElementById('post-search').value.toLowerCase();
+  const layout = document.getElementById('layout-select').value;
+  const filtered = allPosts.filter(p =>
+    (!q || p.title.toLowerCase().includes(q)) &&
+    (!layout || p.layout === layout)
+  );
+  renderPostsTable(filtered);
+}
+
+function renderPostsTable(posts) {
+  document.getElementById('posts-table').innerHTML = `
+    <div class="grid grid-cols-12 text-xs font-semibold text-[#8b949e] uppercase px-4 py-2 border-b border-[#21262d]">
+      <div class="col-span-2">Date</div>
+      <div class="col-span-5">Title</div>
+      <div class="col-span-2">Layout</div>
+      <div class="col-span-3">Path</div>
+    </div>
+    ${posts.slice(0, 200).map(p => `
+      <div class="table-row grid grid-cols-12 items-center px-4 py-2.5 text-sm hover:bg-[#21262d] group">
+        <div class="col-span-2 text-xs text-[#8b949e]">${p.date || '—'}</div>
+        <div class="col-span-5 font-medium text-[#c9d1d9] truncate">${escHtml(p.title)}</div>
+        <div class="col-span-2"><span class="pill bg-[#1a1f30] text-[#58a6ff] text-xs">${p.layout}</span></div>
+        <div class="col-span-3 flex items-center gap-2">
+          <span class="text-xs text-[#8b949e] truncate flex-1">${p.path}</span>
+          <a href="http://localhost:4000${p.url}" target="_blank" class="text-[#58a6ff] opacity-0 group-hover:opacity-100 text-xs shrink-0">↗</a>
+        </div>
+      </div>
+    `).join('')}
+    ${posts.length > 200 ? `<div class="px-4 py-3 text-xs text-center text-[#8b949e]">Showing 200 of ${posts.length} — use filters to narrow</div>` : ''}
+    ${posts.length === 0 ? '<div class="px-4 py-8 text-center text-[#8b949e] text-sm">No posts match</div>' : ''}
+  `;
+}
+
+// ── Data editor tab ───────────────────────────────────────────────────────────
+
+async function loadDataTab() {
+  if (!manifest) return;
+  const list = document.getElementById('data-file-list');
+  list.innerHTML = manifest.dataFiles.map(f => `
+    <button onclick="openDataFile('${escHtml(f.path)}')" class="w-full text-left px-4 py-2.5 text-xs font-mono text-[#c9d1d9] hover:bg-[#21262d] border-b border-[#21262d] last:border-0 block truncate">${f.path}</button>
+  `).join('');
+}
+
+async function openDataFile(filePath) {
+  // Switch to data tab
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-tab="data"]').classList.add('active');
+  document.getElementById('tab-data').classList.add('active');
+  await loadDataTab();
+
+  const res = await fetch('/api/file?path=' + encodeURIComponent(filePath));
+  const file = await res.json();
+  const panel = document.getElementById('data-editor-panel');
+  panel.innerHTML = `
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-sm font-semibold text-white font-mono">${filePath}</h2>
+      <button onclick="saveDataFile('${escHtml(filePath)}')" class="btn btn-primary text-xs">Save</button>
+    </div>
+    <textarea id="data-editor-textarea" class="w-full h-[60vh] bg-[#0d1117] border border-[#30363d] rounded-lg p-4 text-xs font-mono text-[#c9d1d9] outline-none resize-none focus:border-[#58a6ff]">${escHtml(file.raw)}</textarea>
+  `;
+}
+
+async function saveDataFile(filePath) {
+  const raw = document.getElementById('data-editor-textarea').value;
+  const res = await fetch('/api/file?path=' + encodeURIComponent(filePath), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'raw', raw }),
+  });
+  const result = await res.json();
+  if (result.error) alert('Error: ' + result.error);
+  else showToast('Saved');
+}
+
+// ── Media tab ─────────────────────────────────────────────────────────────────
+
+async function loadMedia(dir) {
+  const res = await fetch('/api/files?path=' + encodeURIComponent(dir));
+  const entries = await res.json();
+  const browser = document.getElementById('media-browser');
+  browser.innerHTML = entries.map(e => `
+    <button onclick="${e.type === 'dir' ? `loadMedia('${dir}/${e.name}')` : `previewMedia('${dir}/${e.name}', '${e.ext}')`}"
+      class="w-full text-left px-4 py-2.5 text-xs hover:bg-[#21262d] border-b border-[#21262d] last:border-0 flex items-center gap-2">
+      <span class="text-[#8b949e]">${e.type === 'dir' ? '📁' : fileIcon(e.ext)}</span>
+      <span class="text-[#c9d1d9] truncate flex-1 font-mono">${e.name}</span>
+      ${e.size != null ? `<span class="text-[#8b949e] text-xs shrink-0">${fmtSize(e.size)}</span>` : ''}
+    </button>
+  `).join('') || '<div class="px-4 py-4 text-xs text-[#8b949e]">Empty</div>';
+}
+
+function previewMedia(filePath, ext) {
+  const imageExts = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.avif'];
+  const preview = document.getElementById('media-preview');
+  const url = '/' + filePath.replace(/^\//, '');
+  if (imageExts.includes((ext || '').toLowerCase())) {
+    preview.innerHTML = `
+      <img src="${url}" class="max-w-full max-h-[60vh] object-contain rounded-lg mx-auto block mb-3">
+      <div class="text-xs text-center text-[#8b949e]">${filePath}</div>
+      <div class="text-center mt-2">
+        <button onclick="navigator.clipboard.writeText('${filePath}')" class="btn btn-ghost text-xs">Copy path</button>
+      </div>`;
+  } else {
+    preview.innerHTML = `<div class="text-xs text-[#8b949e] text-center">${filePath}<br><button onclick="navigator.clipboard.writeText('${filePath}')" class="btn btn-ghost text-xs mt-3">Copy path</button></div>`;
+  }
+}
+
+async function uploadFiles(input) {
+  const files = [...input.files];
+  for (const file of files) {
+    const fd = new FormData();
+    fd.append('file', file);
+    await fetch('/api/upload?dir=assets/images', { method: 'POST', body: fd });
+  }
+  loadMedia('assets');
+  showToast(`Uploaded ${files.length} file(s)`);
+}
+
+// ── Build tab ─────────────────────────────────────────────────────────────────
+
+function runPreset(preset) {
+  const out = document.getElementById('shell-output');
+  out.classList.remove('hidden');
+  out.innerHTML = `<span class="text-[#8b949e]">Running ${preset}…\n</span>`;
+
+  fetch('/api/shell', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ preset }),
+  }).then(res => {
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    function read() {
+      reader.read().then(({ done, value }) => {
+        if (done) return;
+        const text = dec.decode(value);
+        for (const line of text.split('\n')) {
+          if (!line.startsWith('data:')) continue;
+          try {
+            const { type, line: l, code } = JSON.parse(line.slice(5));
+            if (type === 'exit') {
+              out.innerHTML += `<span class="${code === 0 ? 'line-exit-ok' : 'line-exit-err'}">Exit: ${code}\n</span>`;
+              if (code === 0) setTimeout(refreshManifest, 500);
+            } else {
+              out.innerHTML += `<span class="line-${type}">${escHtml(l)}\n</span>`;
+            }
+            out.scrollTop = out.scrollHeight;
+          } catch (_) {}
+        }
+        read();
+      });
+    }
+    read();
+  });
+}
+
+// ── Debug tab ─────────────────────────────────────────────────────────────────
+
+async function loadDebugTab() {
+  loadFlagsPanel();
+  loadDebugState();
+  setupUrlBuilder();
+}
+
+async function loadFlagsPanel() {
+  const panel = document.getElementById('flags-panel');
+  try {
+    const res = await fetch('/api/file?path=_data/features.json');
+    const file = await res.json();
+    const flat = flattenObject(file.data);
+    panel.innerHTML = Object.entries(flat).map(([key, val]) => `
+      <div class="flex items-center justify-between py-2 border-b border-[#21262d] last:border-0">
+        <span class="text-xs font-mono text-[#c9d1d9]">${key}</span>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" ${val !== false ? 'checked' : ''} onchange="toggleFlag('${key}', this.checked)" class="rounded">
+          <span class="text-xs text-[#8b949e]">${val !== false ? 'on' : 'off'}</span>
+        </label>
+      </div>
+    `).join('');
+  } catch (_) {
+    panel.innerHTML = '<div class="text-xs text-[#8b949e]">features.json not found</div>';
+  }
+}
+
+async function toggleFlag(key, value) {
+  await fetch('/api/debug/flag', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, value }),
+  });
+  showToast(`${key} = ${value}`);
+}
+
+async function simulate(mode) {
+  const res = await fetch('/api/debug/simulate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode }),
+  });
+  const data = await res.json();
+  const el = document.getElementById('sim-status');
+  el.textContent = mode === 'none' ? 'Cookie cleared' : `Simulating: ${mode} subscriber`;
+  el.classList.remove('hidden');
+}
+
+async function loadDebugState() {
+  const res = await fetch('/api/debug/state');
+  const data = await res.json();
+  document.getElementById('debug-state').textContent = JSON.stringify(data, null, 2);
+}
+
+function setupUrlBuilder() {
+  const inputs = ['url-base', 'url-sub', 'url-teaser', 'url-debug'];
+  inputs.forEach(id => document.getElementById(id)?.addEventListener('input', updateUrl));
+  updateUrl();
+}
+
+function updateUrl() {
+  const base = document.getElementById('url-base')?.value || '';
+  const params = new URLSearchParams();
+  const sub = document.getElementById('url-sub')?.value;
+  const teaser = document.getElementById('url-teaser')?.value;
+  const debug = document.getElementById('url-debug')?.value;
+  if (sub) params.set('_sub', sub);
+  if (teaser) params.set('_teaser', teaser);
+  if (debug !== undefined && debug !== '') params.set('debug', debug);
+  const q = params.toString();
+  document.getElementById('url-result').textContent = base + (q ? '?' + q : '');
+}
+
+function copyUrl() { navigator.clipboard.writeText(document.getElementById('url-result').textContent); showToast('Copied'); }
+function openUrl() { window.open(document.getElementById('url-result').textContent, '_blank'); }
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
+function escHtml(s) { return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtSize(b) { if (b > 1024*1024) return (b/1024/1024).toFixed(1)+'MB'; if (b > 1024) return (b/1024).toFixed(1)+'KB'; return b+'B'; }
+function fileIcon(ext) { const m = {'.jpg':'🖼','jpeg':'🖼','.png':'🖼','.gif':'🖼','.webp':'🖼','.svg':'🖼','.pdf':'📄','.yml':'⚙','.json':'⚙','.md':'📝','.rb':'💎','.js':'📜','.css':'🎨'}; return m[ext] || '📄'; }
+
+function flattenObject(obj, prefix = '') {
+  const result = {};
+  for (const [k, v] of Object.entries(obj || {})) {
+    const key = prefix ? `${prefix}.${k}` : k;
+    if (v !== null && typeof v === 'object' && !Array.isArray(v)) Object.assign(result, flattenObject(v, key));
+    else result[key] = v;
+  }
+  return result;
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.textContent = msg;
+  t.className = 'fixed bottom-4 right-4 bg-[#238636] text-white text-xs px-4 py-2 rounded-lg shadow-lg z-50';
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+refreshManifest();
+</script>
+</body>
+</html>
