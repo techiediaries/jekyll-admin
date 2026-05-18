@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const chokidar = require('chokidar');
-const { buildManifest } = require('./lib/scanner');
+const { buildManifest, patchManifest } = require('./lib/scanner');
 const { streamCommand } = require('./lib/shell');
 const { readFile, writeFile, listDir } = require('./lib/file-api');
 
@@ -38,19 +38,26 @@ function checkDebugAuth(req, res) {
 
 let manifest = null;
 let manifestBuilding = false;
+let refreshTimer = null;
 
-async function refreshManifest() {
+async function refreshManifest(changedFile) {
   if (manifestBuilding) return;
   manifestBuilding = true;
   try {
-    manifest = buildManifest(SITE_ROOT);
-    console.log(`[jekyll-admin] Manifest: ${manifest.totals.posts} posts, ${manifest.totals.layouts} layouts, ${manifest.totals.plugins} plugins`);
+    if (changedFile && manifest) {
+      manifest = await patchManifest(manifest, changedFile, SITE_ROOT);
+    } else {
+      manifest = await buildManifest(SITE_ROOT);
+    }
+    console.log(`[jekyll-admin] ${manifest.totals.posts} posts, ${manifest.totals.layouts} layouts, ${manifest.totals.plugins} plugins`);
+  } catch (e) {
+    console.error('[jekyll-admin] Manifest error:', e.message);
   } finally {
     manifestBuilding = false;
   }
 }
 
-// Watch for changes and re-scan
+// Incremental watcher — passes the changed file path so only that section rescans
 chokidar.watch([
   path.join(SITE_ROOT, '_posts'),
   path.join(SITE_ROOT, '_layouts'),
@@ -58,7 +65,10 @@ chokidar.watch([
   path.join(SITE_ROOT, '_includes'),
   path.join(SITE_ROOT, '_data'),
 ], { ignoreInitial: true, ignored: /(_site|node_modules)/ })
-  .on('all', () => setTimeout(refreshManifest, 500));
+  .on('all', (event, changedPath) => {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => refreshManifest(changedPath), 300);
+  });
 
 // ── Manifest API ──────────────────────────────────────────────────────────────
 
