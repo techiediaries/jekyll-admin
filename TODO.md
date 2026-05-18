@@ -10,6 +10,7 @@ Design principles:
 - Every UI action is backed by a REST API call — UI and LLM/automation use identical endpoints
 - Debug panel available in both local and prod, gated by feature flag + ?debug=<secret>
 - All state is file-system — no database
+- UI is i18n-first: all strings in locale files, RTL/LTR toggled via html[dir], logical CSS properties throughout
 
 ---
 
@@ -18,6 +19,27 @@ Design principles:
 ## Backlog
 
 <!-- P1 and P2 complete — 2026-05-18 -->
+
+### i18n + RTL/LTR support (bake in before P3, not after)
+Design: locale files + logical CSS — add before more UI is written or retrofitting becomes painful.
+
+- [ ] Create `public/locales/en.json` — all UI strings keyed (e.g. `{ "nav.inspector": "Inspector", "layouts.title": "Layouts", ... }`)
+- [ ] Create `public/locales/ar.json` — Arabic translations of all keys
+- [ ] `public/js/i18n.js`: load locale JSON, expose `t('key')` function, fall back to `en` for missing keys
+- [ ] Language switcher in sidebar footer: flag/name dropdown, saves choice to `localStorage`
+- [ ] On language change: update `document.documentElement.lang` + `document.documentElement.dir` (rtl|ltr)
+- [ ] CSS: replace all `margin-left/right`, `padding-left/right`, `text-align: left` with logical properties:
+  - `margin-left` → `margin-inline-start`
+  - `padding-right` → `padding-inline-end`
+  - `text-align: left` → `text-align: start`
+  - `border-left` → `border-inline-start`
+- [ ] Tailwind: use `ms-` / `me-` / `ps-` / `pe-` classes (margin/padding inline start/end) instead of `ml-`/`mr-`/`pl-`/`pr-`
+- [ ] Sidebar: flips to right automatically in RTL via `flex-direction` + logical margins (no separate RTL stylesheet)
+- [ ] Icon arrows (↗, →, ←): use `dir`-aware transform or replace with CSS `rotate` that respects writing mode
+- [ ] jekyll-admin.config.js: `locale: 'ar'` sets default language (site owner override)
+- [ ] `GET /api/config` returns configured locale so UI picks it up on first load without flash
+- [ ] Adding a new language = drop a new JSON file in `public/locales/xx.json`, zero code changes
+- [ ] Document locale key naming convention in README: `section.element` (e.g. `posts.filterPlaceholder`)
 
 
 ### P1 — Server + Site Manifest (foundation everything builds on)
